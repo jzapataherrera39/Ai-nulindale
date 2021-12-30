@@ -10,6 +10,7 @@
  * @returns {Behavior_Separation}
  */
 
+
 var vector = [];
 var cantElementos = 0;
 

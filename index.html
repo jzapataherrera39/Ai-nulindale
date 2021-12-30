@@ -1,0 +1,847 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ainulindale: La gran Canción</title>
+  <script src="./js/phaser.js"></script>
+  <script src="./js/movimientos.js"></script>
+
+  <style type="text/css">
+  body {
+    margin: 0;
+  }
+  </style>
+</head>
+<body>
+
+
+  <script type="text/javascript">
+  //var wx = window.screen.width
+  //var wy = window.screen.height
+  //var w=window,d=document,e=d.documentElement,g=d.getElementsByTagName('body')[0],wx=w.innerWidth||e.clientWidth||g.clientWidth,wy=w.innerHeight||e.clientHeight||g.clientHeight;
+//window.onload = function() {
+  var config = {
+    type: Phaser.AUTO,
+    width: 800,//wx,
+    height: 700,//wy
+    backgroundColor:'2D2D2D',
+    orientation: 'PORTRAIT',
+    title: 'Ainulindale: La gran Canción',
+    physics: {
+      default: 'arcade',
+      arcade: {
+        //gravity: { y: 300 },
+        debug: false
+      }
+    },
+    pixelArt: true,
+    audio: {
+        disableWebAudio: true
+    },
+    scene: [
+      SceneA ={
+        preload: preload,
+        create: create,
+        update: update,
+        render: render
+      },
+    ]
+    //scene: { SceneA, SceneB, SceneC }
+  };
+
+  var player, stars, platforms, cursors;
+  var gameOver = false;
+  var radius = 140;
+  var angle = 0;
+  var originX,originY;
+  var barras=[];
+  var paso=0;
+  var tween;
+  var fromColors;
+  var toColors;
+  var tweenBarra1;
+  var tweenBarraS;
+  var tweenBarraS1;
+  var tweenBarra2;
+  var tweenBarraS2;
+  var tweenBarraS3;
+  var boidsAmount = 50;
+  var boids = [];
+  var elementosResizeables;
+  var game = new Phaser.Game(config);
+  var ancho = game.config.width, alto = game.config.height;
+  var cuadrantes,curve,graphics;
+  var escena;
+  var fx,cantidadNotas, duracion, markers,numeroNota;
+  var circulo;
+  var notasVagas=[];
+  window.focus();
+
+
+//   window.addEventListener('resize', function (event) {
+//
+//     game.resize(window.innerWidth, window.innerHeight);
+//
+// }, false);
+  function preload ()
+  {
+    this.load.image('ground', 'assets/platformBlanca.png');
+    this.load.image('block', 'assets/grisSimple.png');
+    this.load.image('star', 'assets/nota.png');
+    this.load.image('bomb', 'assets/boid.png');
+    this.load.spritesheet('dude', 'assets/playerAmarillo.png', { frameWidth: 51, frameHeight: 48 });
+    this.load.image('exp1', 'assets/playerAmarilloExplode1.png');
+    this.load.image('exp2', 'assets/playerAmarilloExplode2.png');
+    this.load.image('exp3', 'assets/playerAmarilloExplode3.png');
+    this.load.image('exp4', 'assets/playerAmarilloExplode4.png');
+
+    //Cargamos la cancion y su duracion en segundos
+    this.load.audio('sfx', [
+       'assets/EscaleraAlCielo.ogg',
+       'assets/EscaleraAlCielo.mp3',
+     ], {
+       instances: 1
+    });
+    //Duracion en segundos
+    largoCancion=468;
+    numeroNota = 1;
+    cantidadNotas = 50;
+    duracion = largoCancion/cantidadNotas;
+    inicio=1;
+    markers = [];
+    for(numeroNota = 1; numeroNota <= cantidadNotas; numeroNota++){
+         markers.push({ name: numeroNota.toString(), start: inicio, duration: duracion, config: {seek: inicio} });
+         inicio += inicio+duracion;
+
+    };
+    numeroNota = 1;
+
+
+    var elementosACargar = ["Creando el Universo","Poniendo HD las estrellas","Alineando Planetas","Inventando excusas","Descansando", "Expandiendo el infinito", "Definiendo aletoreidad y libre albedrío"]
+    //Animacion de carga
+    var progressBar = this.add.graphics();
+            var progressBox = this.add.graphics();
+            progressBox.fillStyle(0x222222, 0.8);
+            progressBox.fillRect(240, 270, 320, 50);
+
+
+            var width = this.cameras.main.width;
+            var height = this.cameras.main.height;
+            var loadingText = this.make.text({
+                x: width / 2,
+                y: height / 2 - 50,
+                text: 'Cargando...',
+                style: {
+                    font: '20px monospace',
+                    fill: '#ffffff'
+                }
+            });
+            loadingText.setOrigin(0.5, 0.5);
+
+            var percentText = this.make.text({
+                x: width / 2,
+                y: height / 2 - 5,
+                text: '0%',
+                style: {
+                    font: '18px monospace',
+                    fill: '#ffffff'
+                }
+            });
+            percentText.setOrigin(0.5, 0.5);
+
+            var assetText = this.make.text({
+                x: width / 2,
+                y: height / 2 + 50,
+                text: '',
+                style: {
+                    font: '18px monospace',
+                    fill: '#ffffff'
+                }
+            });
+
+            assetText.setOrigin(0.5, 0.5);
+            //Dibujando progreso de la barra
+            this.load.on('progress', function (value) {
+                percentText.setText(parseInt(value * 100) + '%');
+                progressBar.clear();
+                progressBar.fillStyle(0xffffff, 1);
+                progressBar.fillRect(250, 280, 300 * value, 30);
+            });
+
+            this.load.on('fileprogress', function (file) {
+                //assetText.setText('Creando los ' + file.key);
+                //Cargamos un texto aleatorio
+                var i = Math.floor(Math.random() * elementosACargar.length);
+                var elemento = elementosACargar[i];
+                elementosACargar = elementosACargar.splice(i, 1);
+                assetText.setText(elemento);
+
+            });
+
+            this.load.on('complete', function () {
+                progressBar.destroy();
+                progressBox.destroy();
+                loadingText.destroy();
+                percentText.destroy();
+                assetText.destroy();
+            });
+
+            // this.load.image('logo', 'zenvalogo.png');
+            // for (var i = 0; i < 5000; i++) {
+            //     this.load.image('logo'+i, 'zenvalogo.png');
+            // }
+  }
+
+  function create ()
+  {
+    //Definimos el circulo de accion del PJ
+    originX=(ancho/2);
+    originY=(alto - (radius+20));
+    //Cargamos la musica
+    fx = this.sound.add('sfx');
+    for (var i=0; i < markers.length; i++)
+    {
+        var marker = markers[i];
+        fx.addMarker(marker);
+    }
+
+    //Definimos los cuadrantes con el tamaño del juegos
+    cuadrantes = definirCuadrantes();
+    //Auto-resize para los juegos
+    //this.events.on('resize', resize, this);
+    //Seteamos timer y contexto para la nueva nota
+    escena = this;
+    lanzarNota(escena);
+    timedEvent = escena.time.addEvent({ delay: duracion*3500, callback: onEvent, callbackScope: this});
+    timedEvent2 = escena.time.addEvent({ delay: 10000, callback: onEventRoja, callbackScope: this});
+    //Empieza codigo de fondo
+    //definir cantidad de figuras para el fondo
+    var blocks = this.add.group({ key: 'block', repeat: (alto/50 * ancho/60), setScale: { x: 0, y: 0 } });
+    Phaser.Actions.GridAlign(blocks.getChildren(), {
+      width: Math.floor(ancho/60),
+      cellWidth: 80,
+      cellHeight: 80,
+      x: 60,
+      y: 50
+    });
+
+    var _this = this;
+
+    var i = 0;
+
+    //define el bucle y movimiento del fondo del fondo
+    blocks.children.iterate(function (child) {
+
+      _this.tweens.add({
+        targets: child,
+        scaleX: 0.55,
+        scaleY: 0.55,
+        angle: 225,
+        // opacity: 4,
+        _ease: 'Sine.easeInOut',
+        ease: 'Power2',
+        duration: 1000,
+        delay: i * 5,
+        repeat: -1,
+        yoyo: true,
+        hold: 1000,
+        repeatDelay: 750
+      });
+
+      i++;
+
+      if (i % 110 === 0)
+      {
+        i = 0;
+      }
+
+    });
+
+
+    //termina Codigo de fondo
+
+
+    player = this.physics.add.sprite(100, 450, 'dude');
+    sombra = this.physics.add.sprite(100, 450, 'dude');
+
+    notaVaga = this.physics.add.sprite(400,300,'star');
+    notaVaga.setTint(0xff0f0f);
+    notasVagas.push(notaVaga);
+
+    movimientoBarras(this,(ancho-201),200);
+
+    //Creacion de las barras para el nivel
+
+    //Dibujamos el circulo de accion del pj
+    circulo = this.add.graphics({ lineStyle: { width: 2, color: 0xf8ffaa}});
+    circle = new Phaser.Geom.Circle(originX, originY, radius);
+    circulo.strokeCircleShape(circle);
+    circulo.alpha = 0.3;
+
+    //Colisiones del PJ
+    //player.setBounce(0.2);
+    player.setCollideWorldBounds(true);
+
+    //Añadimos la animación al PJ
+    this.anims.create({
+      key: 'left',
+      frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 4 }),
+      frameRate: 15,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'turn',
+      frames: [ { key: 'dude', frame: 4 } ],
+      //frames: this.anims.generateFrameNumbers('dude', { start: 4, end: 6 }),
+      frameRate: 10,
+    });
+
+    this.anims.create({
+      key: 'right',
+      frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 4 }),
+      frameRate: 15,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'up',
+      frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 4 }),
+      frameRate: 15,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'down',
+      frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 4 }),
+      frameRate: 15,
+      repeat: -1
+    });
+    //Creamos la animación de la explosión del jugador
+    this.anims.create({
+      key: 'explode',
+      frames: [
+        { key: 'exp1' },
+        { key: 'exp2' },
+        { key: 'exp3' },
+        { key: 'exp4' }
+      ],
+      frameRate: 8,
+      repeat: -1
+    });
+
+
+    cursors = this.input.keyboard.createCursorKeys();
+
+    //Colisiones de las barras
+    this.physics.add.collider(sombra, barras, hitBarra, null, this); // Para la interseccion  entre barra y player
+	  this.physics.add.collider(sombra, barras2, hitBarra, null, this); // Para la interseccion  entre barra y player
+
+
+    //Cargamos las físicas de impacto del PJ y seleccionamos donde comienza
+    //this.physics.add.overlap(sombra, stars, collectStar, null, this);
+    this.physics.add.overlap(sombra, notaVaga, collectStar, null, this);
+    player.x = (originX + Math.cos(Math.PI*0.03)*radius);
+    player.y = (originY + Math.sin(Math.PI*0.03)*radius);
+    sombra.x = originX;
+    sombra.y = originY;
+    player.body.allowGravity=false;
+    sombra.setCollideWorldBounds(true);
+    notaVaga.setCollideWorldBounds(true);
+
+    //Colors
+    fromColors = getRandomVertexColors();
+
+    sombra.setTint(
+        fromColors.topLeft.color,
+        fromColors.topRight.color,
+        fromColors.bottomLeft.color,
+        fromColors.bottomRight.color
+    );
+
+    // Bind the scope to tintTween so we can use this.tweens inside it.
+    tintTween = tintTween.bind(this);
+
+    initTweens();
+
+  }
+
+  function update ()
+  {
+    //Chequeo si termino el flocking
+    if(boids[0].body != null){
+      var termino = checkFlocking();
+      if(termino){
+        var cenX =boids[0].body.x;
+        var cenY =boids[0].body.y;
+        for(var i = 0; i < boidsAmount; i++){
+          boids[i].destroy(true,true);
+        }
+        lineas(this,cenX,cenY);
+      }
+      else{
+        //Movimiento de flocking
+        flocking(boids,game);
+      }
+    }
+    // var _this = this;
+    // notasVagas.children.iterate(function (child) {
+    //   wander(child);
+    // });
+    this.input.mouse.disableContextMenu();
+    if (!gameOver)
+    {
+      //Movimiento del PJ
+      seek(sombra,player);
+      //Movimiento de todas las notas rojas
+      for(var i=0;i < notasVagas.length; i++){
+          wander(notasVagas[i]);
+      }
+
+
+
+      this.input.on('pointermove', function (pointer) {
+          sx = pointer.x;
+          sy = pointer.y;
+          if (pointer.leftButtonDown() && sx >= player.x )
+              {
+                angle -= Math.PI*0.0001
+                player.x = (originX + Math.cos(angle)*radius);
+                player.y = (originY + Math.sin(angle)*radius);
+                sombra.anims.play('left', true);
+                  //console.log(pointer);
+
+              }
+              else if (pointer.leftButtonDown() && sx<= player.x)
+              {
+
+                  angle += Math.PI*0.0001
+                  player.x =(originX + Math.cos(angle)*radius);
+                  player.y =(originY + Math.sin(angle)*radius);
+                  sombra.anims.play('right', true);
+
+              }
+
+        });
+
+          if (cursors.left.isDown)
+          {
+            //X := originX + cos(angle)*radius;
+            //Y := originY + sin(angle)*radius;
+            angle -= Math.PI*0.03
+            player.x = (originX + Math.cos(angle)*radius);
+            player.y = (originY + Math.sin(angle)*radius);
+            sombra.anims.play('left', true);
+
+          }
+          else if (cursors.right.isDown)
+          {
+            angle += Math.PI*0.03
+            player.x =(originX + Math.cos(angle)*radius);
+            player.y =(originY + Math.sin(angle)*radius);
+            //player.setVelocityX(160);
+
+            sombra.anims.play('right', true);
+
+          }
+          else
+          {
+            player.setVelocityX(0);
+
+            sombra.anims.play('turn');
+          }
+    }
+    //magiabarra();
+
+
+
+  }
+
+
+  function onEvent ()
+  {
+    graphics.visible=false;
+    if((numeroNota <= cantidadNotas)&&(!gameOver)){
+      lanzarNota(escena);
+      timedEvent.reset({ delay: Phaser.Math.Between(duracion*3500,4300*duracion), callback: onEvent, callbackScope: this, repeat: 1});
+      //timedEvent2.reset({ delay: Phaser.Math.Between(duracion*8000,8500*duracion), callback: onEvent, callbackScope: this, repeat: 1});
+    }
+  }
+
+  function onEventRoja ()
+  {
+    graphics.visible=false;
+    if((numeroNota <= cantidadNotas)&&(!gameOver)){
+      lanzarNotaRoja(escena);
+      timedEvent2.reset({ delay: Phaser.Math.Between(duracion*10000,10500*duracion), callback: onEventRoja, callbackScope: this, repeat: 1});
+    }
+  }
+
+
+  function collectStar (player, star)
+  {
+    star.disableBody(true, true);
+    star.visible=false;
+    star.destroy();
+    //Animamos el pj
+    player.setTint(0xff0f0f);
+    sombra.anims.play('explode');
+    player.anims.play('explode');
+    //Avisamos que termino el juego
+    gameOver = true;
+    //Escondemos el circulo
+    circulo.visible = false;
+    //Quitamos los sprites
+    barras.destroy();
+    barras2.destroy();
+    //Detenemos la generacion de notas
+    numeroNota=cantidadNotas;
+  }
+  function collectStar2 (player, star)
+  {
+    //if (fx.isPlaying)
+    //{
+    //  fx.pause();
+    //}
+    fx.play(markers[numeroNota]);
+    numeroNota += 1;
+    star.visible = false;
+    star.destroy();
+    graphics.visible=false;
+  }
+
+  function lanzarNota(scope){
+    var cuadrante = Math.floor(Math.random() * 6) + 1;
+    nubeNota(scope,cuadrantes[cuadrante].anchoCuadInicio,cuadrantes[cuadrante].anchoCuadFin,cuadrantes[cuadrante].altoCuadInicio,cuadrantes[cuadrante].altoCuadFin);
+  }
+
+  function lanzarNotaRoja(scope){
+    var notaNueva = scope.physics.add.sprite(400,300,'star');
+    notaNueva.setTint(0xff0f0f);
+    notasVagas.push(notaNueva);
+    notaNueva.setCollideWorldBounds(true);
+
+  }
+
+  function hitBarra (player, barras)
+  {
+    //Escondemos el circulo
+    circulo.visible = false;
+    //Quitamos los sprites
+    barras.destroy();
+    barras2.destroy();
+    //Detenemos la generacion de notas
+    numeroNota=cantidadNotas;
+    //Pausamos las fisicas
+    this.physics.pause();
+    //Animamos el pj
+    player.setTint(0xff0f0f);
+    sombra.anims.play('explode');
+    player.anims.play('explode');
+    //Avisamos que termino el juego
+    gameOver = true;
+
+  }
+
+  function render () {
+
+    //debug helper
+    //game.debug.spriteInfo(barra,32,32);
+
+  }
+
+  function getRandomVertexColors ()
+{
+    // Create a random color for each vertex.
+    // RandomRGB returns a Phaser.Display.Color object with random RGB values.
+    var RandomRGB = Phaser.Display.Color.RandomRGB;
+    return {
+        topLeft: RandomRGB(),
+        topRight: RandomRGB(),
+        bottomLeft: RandomRGB(),
+        bottomRight: RandomRGB()
+    };
+}
+
+function getTintColor (vertex)
+{
+
+    // Interpolate between the fromColor and toColor of the current vertex,
+    // using the current tween value.
+    var tint = Phaser.Display.Color.Interpolate.ColorWithColor(
+        fromColors[vertex],
+        toColors[vertex],
+        100,
+        tween.getValue()
+    );
+
+    // Interpolate.ColorWithColor returns a Javascript object with
+    // interpolated RGB values. We convert it to a Phaser.Display.Color object
+    // in order to get the integer value of the tint color.
+    return Phaser.Display.Color.ObjectToColor(tint).color;
+}
+
+function tintTween (fromColors, toColors, callback)
+{
+    tween = this.tweens.addCounter({
+        from: 0,
+        to: 100,
+        duration: 2000,
+        onUpdate: function ()
+        {
+            sombra.setTint(
+                getTintColor('topLeft'),
+                getTintColor('topRight'),
+                getTintColor('bottomLeft'),
+                getTintColor('topRight')
+            );
+        },
+        onComplete: callback
+    });
+}
+
+function initTweens ()
+{
+    fromColors = toColors || fromColors;
+    toColors = getRandomVertexColors();
+    tintTween(
+        fromColors,
+        toColors,
+        initTweens
+    );
+}
+
+function magiabarra(){ // Es la misma barra una y otra vez.
+  if (barras.y>700) {
+    barras.y=0;
+    barras.x = Phaser.Math.Between(0, 600);
+    var escala=Phaser.Math.Between(1, 5);
+    barras.setScale(1/escala,1);
+    console.log(escala)
+    console.log(barras.x)
+
+}
+}
+
+function movimientoBarras(scope, coor1, coor2){
+  //Creacion de las barras para el nivel
+  barras = scope.physics.add.image(coor1, -9, 'ground'); // Se agrega las barras 600,0 cordenada actual)
+  marker = scope.physics.add.image(coor1, -9, 'ground').setAlpha(0.7);//se crea una sombra (600,0 cordenada actual)
+  marker1 = scope.physics.add.image(coor1, -9, 'ground').setAlpha(0.3);//se crea una sombra (600,0 cordenada actual)
+
+  //barras.body.setGravityY(-100);
+  //movimiento de la barra (x,y cordenadas futuras)
+  tweenBarra1=scope.tweens.add({
+    targets: barras,
+    x: coor1,
+    y:alto + 100,
+    duration: 6000,
+    ease: 'Power2',
+    repeat: 2 ,
+      yoyo: false,
+      repeatDelay: 200,
+   completeDelay: 300
+  });
+
+  //movimiento de la sombra (x,y cordenadas futuras)
+  tweenBarraS1=scope.tweens.add({
+    targets: marker,
+    x: coor1,
+    y:alto + 100,
+    duration: 6050,
+    ease: 'Power2',
+     repeat: 2,
+      yoyo: false,
+      repeatDelay: 150,
+    completeDelay: 305
+  });
+
+  //movimiento de la sombra (x,y cordenadas futuras)
+  tweenBarraS2=scope.tweens.add({
+      targets: marker1,
+      x: coor1,
+      y:alto + 100 ,
+      //angle:180,
+      repeat: 2,
+      duration: 6100,
+      repeatDelay: 100,
+      ease: 'Power2',
+     completeDelay: 305
+  });
+
+
+  barras2 = scope.physics.add.image(coor2, -1200, 'ground'); // Se agrega las barras 600,0 cordenada actual)
+  marker2 = scope.physics.add.image(coor2, -1200, 'ground').setAlpha(0.7);//se crea una sombra (600,0 cordenada actual)
+  marker3 = scope.physics.add.image(coor2, -1200, 'ground').setAlpha(0.3);//se crea una sombra (600,0 cordenada actual)
+
+  barras2.scaleX=Phaser.Math.FloatBetween(0.5, 0.8)
+  marker2.scaleX=barras2.scaleX
+  marker3.scaleX=barras2.scaleX
+  //barras.body.setGravityY(-100);
+  //movimiento de la barra (x,y cordenadas futuras)
+  tweenBarra2= scope.tweens.add({
+    targets: barras2,
+    x: coor2,
+    y:alto + 100,
+    duration: 6700,
+    ease: 'Power2',
+    repeat: 2,
+    yoyo: false,
+    repeatDelay: 200,
+    completeDelay: 3000
+  });
+
+  //movimiento de la sombra (x,y cordenadas futuras)
+  tweenBarraS2= scope.tweens.add({
+    targets: marker2,
+    x: coor2,
+    y:alto + 100,
+    duration: 6750,
+    ease: 'Power2',
+    repeat: 2,
+    yoyo: false,
+    repeatDelay: 150,
+    completeDelay: 3050
+  });
+
+  //movimiento de la sombra (x,y cordenadas futuras)
+  tweenBarraS3= scope.tweens.add({
+      targets: marker3,
+      x: coor2,
+      y:alto + 100 ,
+      //angle:180,
+      duration: 6800,
+      repeatDelay: 100,
+      ease: 'Power2',
+      repeat: 2,
+      completeDelay: 3050
+  });
+}
+
+function resize (width, height)
+{
+    if (width === undefined) { width = this.sys.game.config.width; }
+    if (height === undefined) { height = this.sys.game.config.height; }
+
+    this.cameras.resize(width, height);
+
+    this.bg.setSize(width, height);
+    this.logo.setPosition(width / 2, height / 2);
+}
+
+function definirCuadrantes(){
+  var cp1x,cp1y,cp2x,cp2y,epx,epy;
+
+  //var anchoCuadInicio = (cuadrante % 3)* ancho* 0.33;
+  //var anchoCuadFin = ((cuadrante % 3) + 1)* ancho* 0.33;
+
+  var altoCuadInicio, altoCuadFin;
+  cuadrantes= {
+         1:{altoCuadInicio : 0,
+          anchoCuadInicio : (1 % 3)* ancho* 0.33,
+          anchoCuadFin : 2* ancho* 0.33,
+          altoCuadFin : alto * 0.165,
+          },
+         2:{altoCuadInicio : 0,
+           anchoCuadInicio : (2 % 3)* ancho* 0.33,
+          altoCuadFin : alto * 0.165,
+          anchoCuadFin : ancho,
+          },
+          3:{altoCuadInicio : 0,
+            anchoCuadInicio : (3 % 3)* ancho* 0.33,
+          altoCuadFin : alto * 0.165,
+          anchoCuadFin : ((3 % 3) + 1)* ancho* 0.33,
+          },
+       4:{altoCuadInicio : alto * 0.165,
+         anchoCuadInicio : (4 % 3)* ancho* 0.33,
+          altoCuadFin : alto * 0.33,
+          anchoCuadFin : ((4%3)+1)* ancho* 0.33,
+          },
+       5:{altoCuadInicio : alto * 0.165,
+         anchoCuadInicio : (5 % 3)* ancho* 0.33,
+          altoCuadFin : alto * 0.33,
+          anchoCuadFin : ancho,
+          },
+      6:{ altoCuadInicio : alto * 0.165,
+        anchoCuadInicio : (6 % 3)* ancho* 0.33,
+          altoCuadFin : alto * 0.33,
+          anchoCuadFin : ((6 % 3) + 1)* ancho* 0.33,
+          }};
+  return cuadrantes;
+}
+
+//graphics,curve,lx,ly,scope
+function lineas(scope,cx,cy){
+    var epx,epy;
+    //epx=Math.floor(Math.random()*(cuadrantes[1].anchoCuadFin-cuadrantes[1].anchoCuadInicio)+cuadrantes[1].anchoCuadInicio);
+    epx=Math.random()*(cuadrantes[1].anchoCuadFin-cuadrantes[1].anchoCuadInicio)+(cuadrantes[1].anchoCuadInicio - cuadrantes[1].anchoCuadInicio*0.15);
+    epy=alto +10;
+    var cuadrante = Math.floor(Math.random() * 6) + 1;
+    var cp1x,cp1y;
+    cp1x = Math.floor(Math.random()*(cuadrantes[cuadrante].anchoCuadFin-cuadrantes[cuadrante].anchoCuadInicio)+cuadrantes[cuadrante].anchoCuadInicio);
+    cp1y = Math.floor(Math.random()*(cuadrantes[cuadrante].altoCuadFin-cuadrantes[cuadrante].altoCuadInicio)+cuadrantes[cuadrante].altoCuadInicio);
+    cuadrante = Math.floor(Math.random() * 6) + 1;
+    cp2x = Math.floor(Math.random()*(cuadrantes[cuadrante].anchoCuadFin-cuadrantes[cuadrante].anchoCuadInicio)+cuadrantes[cuadrante].anchoCuadInicio);
+    cp2y = Math.floor(Math.random()*(cuadrantes[cuadrante].altoCuadFin-cuadrantes[cuadrante].altoCuadInicio)+cuadrantes[cuadrante].altoCuadInicio);
+
+//se crean 4 vectores para que se utilizan de puntos para trazas la curva
+    var startPoint = new Phaser.Math.Vector2(cx, cy);
+    var controlPoint1 = new Phaser.Math.Vector2(cp1x, cp1y);
+    var controlPoint2 = new Phaser.Math.Vector2(cp2x, cp2y);
+    var endPoint = new Phaser.Math.Vector2(epx, epy);
+//se calcula la curva que recorrera la nota
+    curve = new Phaser.Curves.CubicBezier(startPoint, controlPoint1, controlPoint2, endPoint);
+
+    graphics = scope.add.graphics();
+//se dibuja la linea calculada
+    graphics.lineStyle(1, 0xf5f5f5, 1);
+
+    curve.draw(graphics, 64);
+//se dibuja la nota en su inicio
+    //var nota=scope.physics.add.image(cx, cy, "star").setActive().setVelocity(0, 0).setBounce(0);
+    var ball = scope.add.follower(curve, cx, cy, 'star');
+     scope.physics.world.enable(ball);
+     scope.physics.add.overlap(sombra, ball, collectStar2, null, this);
+
+//caracteristicas del movimiento de la nota
+    ball.startFollow({
+        duration: 3000,
+        repeat: 2,
+        ease: 'Sine.easeInOut'
+    });
+
+}
+
+function nubeNota(scope,x0,x1,y0,y1){
+  //Puntos para flocking
+  for(var i = 0; i < boidsAmount; i++){
+       // placing the boid at a random point within the canvas
+       var randomPoint = new Phaser.Geom.Point(Math.floor(Math.random()*(x1-x0)+x0), Math.floor(Math.random()* (y1- y0)+y0));
+       boids[i] = scope.physics.add.image(randomPoint.x, randomPoint.y, "bomb").setActive().setVelocity(0, 0).setBounce(0);
+       // enabling boid physics
+       //this.physics.create(boids[i].asset, Phaser.Physics.ARCADE);
+       // allowing us to manually rotate the boid
+       boids[i].body.allowRotation = false;
+  };
+
+}
+
+//}
+
+  function checkFlocking(){
+     var x= boids[0].body.x;
+     var y= boids[0].body.y;
+     var todos=true;
+     for(var i = 0; i < boidsAmount; i++){
+       if (Math.floor(x)!=Math.floor(boids[i].body.x) && Math.floor(y)!=Math.floor(boids[i].body.y)){
+         todos=false;
+         break;
+       }
+     }
+     return todos;
+  };
+
+</script>
+
+</body>
+</html>
